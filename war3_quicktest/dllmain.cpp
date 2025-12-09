@@ -202,9 +202,6 @@ void __fastcall fake_CGlueMgr_SetGlueScreen_host(uint32_t a1, uint32_t a2) {
 void(__thiscall* real_CGameChatroom_OnDistFilesOutstanding)(CGameChatroom*, CNetGlueGameSetup::CEventDistFilesOutstanding*);
 void __fastcall fake_CGameChatroom_OnDistFilesOutstanding(CGameChatroom* _this, uint32_t, CNetGlueGameSetup::CEventDistFilesOutstanding* e) {
     real_CGameChatroom_OnDistFilesOutstanding(_this, e);
-    // all ready
-    if (e->count == 1 && player_joined == 1)
-        SetEvent(hEvent[0]);
     if (e->count == 0 && player_count == player_joined) {
         // start game
         NetStartGame(_this->session);
@@ -225,18 +222,17 @@ uint32_t(__fastcall* real_Net_RandomNumber)(uint32_t);
 uint32_t __fastcall fake_Net_RandomNumber(uint32_t) {
     return 'test';
 }
-uint32_t(__fastcall* real_CGameWar3_LoadMapSetup)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
-uint32_t __fastcall fake_CGameWar3_LoadMapSetup(uint32_t a1, uint32_t, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5) {
+BOOL(__thiscall* real_CGameWar3_LoadMapSetup)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+BOOL __fastcall fake_CGameWar3_LoadMapSetup(uint32_t a1, uint32_t, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5) {
     auto ret = real_CGameWar3_LoadMapSetup(a1, a2, a3, a4, a5);
     if (!ret) {
         SetEvent(hEvent[1]);
         MessageBoxA(NULL, "Load map setup failed", "ERROR", MB_OK);
         TerminateProcess(GetCurrentProcess(), 1);
     }
-    MessageBoxA(NULL, "Load map setup failed", "ERROR", MB_OK);
     // host ready to accept join request
     SetEvent(hEvent[0]);
-
+    
     return ret;
 }
 void(__fastcall* real_NetLeaveGame)(uint32_t, uint32_t, uint32_t);
@@ -469,6 +465,8 @@ bool init_game() {
     }
 
     SRegLoadString("WorldEdit", "Test Map - Player Profile", 0, player_name, sizeof(player_name));
+    if (!player_name[0])
+        strcpy_s(player_name, "WorldEdit");
 
     if (std::string(GetCommandLineA()).find("-host") != std::string::npos) {
         // prepare hook function address
@@ -477,6 +475,7 @@ bool init_game() {
         WriteMemory((uint32_t)&real_CGameChatroom_OnPlayerJoin              , CGameChatroom_OnPlayerJoin);
         WriteMemory((uint32_t)&real_Net_RandomNumber                        , Net_RandomNumber);
         WriteMemory((uint32_t)&real_NetLeaveGame                            , NetLeaveGame);
+        WriteMemory((uint32_t)&real_CGameWar3_LoadMapSetup                  , CGameWar3_LoadMapSetup);
 
         // install hook
         DetourTransactionBegin();
@@ -486,6 +485,7 @@ bool init_game() {
         DetourAttach(&(PVOID&)real_CGameChatroom_OnPlayerJoin, fake_CGameChatroom_OnPlayerJoin);
         DetourAttach(&(PVOID&)real_Net_RandomNumber, fake_Net_RandomNumber);
         DetourAttach(&(PVOID&)real_NetLeaveGame, fake_NetLeaveGame);
+        DetourAttach(&(PVOID&)real_CGameWar3_LoadMapSetup, fake_CGameWar3_LoadMapSetup);
         DetourTransactionCommit();
 
         // parse args
