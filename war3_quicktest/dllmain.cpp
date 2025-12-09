@@ -499,19 +499,19 @@ bool init_game() {
             }
         
         // create event
-        hEvent[0] = CreateEventA(NULL, true, false, "war3_localtest0");
-        hEvent[1] = CreateEventA(NULL, true, false, "war3_localtest1");
+        hEvent[0] = CreateEventA(NULL, true, false, "war3_quicktest0");
+        hEvent[1] = CreateEventA(NULL, true, false, "war3_quicktest1");
         
         real_SEH_handler = SetUnhandledExceptionFilter(fake_SEH_handler);
     }
     else if (std::string(GetCommandLineA()).find("-join") != std::string::npos) {
         // open event
         while (hEvent[0] == NULL) {
-            hEvent[0] = OpenEventA(SYNCHRONIZE, false, "war3_localtest0");
+            hEvent[0] = OpenEventA(SYNCHRONIZE, false, "war3_quicktest0");
             Sleep(1);
         }
         while (hEvent[1] == NULL) {
-            hEvent[1] = OpenEventA(SYNCHRONIZE, false, "war3_localtest1");
+            hEvent[1] = OpenEventA(SYNCHRONIZE, false, "war3_quicktest1");
             Sleep(1);
         }
         // get status (ready / failed)
